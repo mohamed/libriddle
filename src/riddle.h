@@ -58,16 +58,5 @@ int32_t riddle_join(
     const struct riddle_share * shares,
     mpz_t secret);
 
-/**
- * @brief Prints the given list of shares
- *
- * @param shares The list of shares
- * @param length The length of shares list
- *
- */
-void riddle_print_shares(
-    const struct riddle_share * shares,
-    const uint32_t length);
-
 
 #endif

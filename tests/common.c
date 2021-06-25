@@ -4,10 +4,29 @@
 #include <gmp.h>
 #include <openssl/rand.h>
 
-#include "../src/riddle.h"
+#include "common.h"
+
 
 #define STRINGFY(x) #x
 
+
+void riddle_print_shares(const struct riddle_share * shares,
+                         const uint32_t length)
+{
+    uint32_t i = 0;
+
+    if (!shares || !length) return;
+
+    gmp_printf("==========================================================\n");
+    gmp_printf("                       List of Shares                     \n");
+    gmp_printf("==========================================================\n");
+    for (i = 0; i < length; i++) {
+        gmp_printf("Share %d:\n", i + 1);
+        gmp_printf("\tPart 1: %Zx\n", shares[i].x);
+        gmp_printf("\tPart 2: %Zx\n", shares[i].y);
+        gmp_printf("\n");
+    }
+}
 
 void riddle_assert(const int x) {
     if (!(x)) {
@@ -44,7 +63,7 @@ int do_test(const mpz_t prime,
                     sizeof(secret_buf[0]), 0, 0, secret_buf);
         riddle_assert(mpz_sizeinbase(secret, 2) < mpz_sizeinbase(prime, 2));
 
-        retval = riddle_split(prime, N, 4, secret, shares);
+        retval = riddle_split(prime, N, L, secret, shares);
         riddle_assert(retval == 0);
         riddle_print_shares(shares, N);
 
@@ -53,7 +72,7 @@ int do_test(const mpz_t prime,
             retval = riddle_join(prime, i,
                                 (const struct riddle_share *) shares,
                                  reconstructed);
-            if (i >= 4) {
+            if (i >= L) {
                 riddle_assert(retval == 0 && \
                               mpz_cmp(reconstructed, secret) == 0);
             } else {

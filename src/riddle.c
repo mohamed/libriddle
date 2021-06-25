@@ -5,7 +5,10 @@
 
 #include "riddle.h"
 
-
+/*
+ * This function generates a list of unique random numbers
+ * The list has list_length elements where each element has size bytes
+ */
 static int32_t gen_unique_random_list(
     const uint32_t list_length,
     const size_t size,
@@ -191,21 +194,3 @@ int32_t riddle_join(
     return 0;
 }
 
-void riddle_print_shares(
-    const struct riddle_share * shares,
-    const uint32_t length)
-{
-    uint32_t i = 0;
-
-    if (!shares || !length) return;
-
-    gmp_printf("==========================================================\n");
-    gmp_printf("                       List of Shares                     \n");
-    gmp_printf("==========================================================\n");
-    for (i = 0; i < length; i++) {
-        gmp_printf("Share %d:\n", i + 1);
-        gmp_printf("\tPart 1: %Zx\n", shares[i].x);
-        gmp_printf("\tPart 2: %Zx\n", shares[i].y);
-        gmp_printf("\n");
-    }
-}

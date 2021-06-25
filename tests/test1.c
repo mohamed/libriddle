@@ -1,7 +1,7 @@
 #include "common.h"
 
 #define N (5)
-#define L (10)
+#define L (3)
 #define S (2)
 
 static char prime_str[] = "909360333829";
