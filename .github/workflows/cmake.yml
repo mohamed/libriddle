@@ -26,4 +26,8 @@ jobs:
       working-directory: ${{github.workspace}}/build_dir
       run: ctest -C ${{env.BUILD_TYPE}}
 
+    - name: MemCheck
+      working-directory: ${{github.workspace}}/build_dir
+      run: ctest -T memcheck
+
 

@@ -7,6 +7,8 @@ project(riddle
 
 include(CTest)
 
+option(USE_SANITIZER "Use Sanitizers?" OFF)
+
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -38,6 +40,13 @@ if(UNIX)
     -Werror
     -fstack-protector-all
   )
+  if(${USE_SANITIZER})
+    target_compile_options(riddle PUBLIC
+      -fsanitize=address
+      -fsanitize=leak
+      -fsanitize=undefined
+    )
+  endif()
 elseif(WIN32)
   if (MSVC)
     target_compile_options(riddle PUBLIC /W3)
@@ -51,6 +60,12 @@ foreach(test ${tests})
     tests/common.c
     tests/${test}.c
   )
+  if(${USE_SANITIZER})
+    target_link_libraries(riddle_${test} PUBLIC
+      asan
+      ubsan
+    )
+  endif()
   target_link_libraries(riddle_${test} PUBLIC
     riddle
     ${OPENSSL_LIBRARIES}
