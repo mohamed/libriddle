@@ -13,10 +13,12 @@ static char prime_str[] = "20395687835640197740576586692903457728019399331434826
 int main()
 {
     int exitcode = EXIT_FAILURE;
-    mpz_t prime;
-    mpz_init_set_str(prime, prime_str, 10);
-    exitcode = do_test(prime, N, L, S);
-    mpz_clear(prime);
+    BIGNUM * prime = NULL;
+    int rv = 0;
+    rv = BN_dec2bn(&prime, prime_str);
+    if (0 == rv) abort();
+    exitcode = do_test(prime, N, L, S, 1);
+    BN_free(prime);
 
     return exitcode;
 }

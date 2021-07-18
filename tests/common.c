@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <gmp.h>
 #include <openssl/rand.h>
 
 #include "common.h"
@@ -14,17 +13,24 @@ void riddle_print_shares(const struct riddle_share * shares,
                          const uint32_t length)
 {
     uint32_t i = 0;
+    char * x, * y;
 
-    if (!shares || !length) return;
+    if (NULL == shares || 0 == length) return;
 
-    gmp_printf("==========================================================\n");
-    gmp_printf("                       List of Shares                     \n");
-    gmp_printf("==========================================================\n");
+    printf("==========================================================\n");
+    printf("                       List of Shares                     \n");
+    printf("==========================================================\n");
     for (i = 0; i < length; i++) {
-        gmp_printf("Share %d:\n", i + 1);
-        gmp_printf("\tPart 1: %Zx\n", shares[i].x);
-        gmp_printf("\tPart 2: %Zx\n", shares[i].y);
-        gmp_printf("\n");
+        printf("Share %d:\n", i + 1);
+        x = BN_bn2hex(shares[i].x);
+        y = BN_bn2hex(shares[i].y);
+        printf("\tPart 1: %s\n", x);
+        printf("\tPart 2: %s\n", y);
+        printf("\n");
+        OPENSSL_free(x);
+        OPENSSL_free(y);
+        x = NULL;
+        y = NULL;
     }
 }
 
@@ -35,58 +41,71 @@ void riddle_assert(const int x) {
     }
 }
 
-int do_test(const mpz_t prime,
+int do_test(const BIGNUM * prime,
             const uint32_t N,
             const uint32_t L,
-            const uint32_t S)
+            const uint32_t S,
+            const uint32_t check_prime)
 {
     int32_t retval = 0;
-    uint32_t i = 0, j = 0;
-    mpz_t secret, reconstructed;
+    uint32_t i = 0;
+    BIGNUM * secret, * reconstructed;
     struct riddle_share shares[N];
-    char secret_buf[S];
+    char * str;
 
-    mpz_init(secret);
-    gmp_printf("Prime = %Zd\n", prime);
-    gmp_printf("Prime size = %zu\n", mpz_sizeinbase(prime, 2));
-
-    for (i = 0; i < N; i++) {
-        mpz_init(shares[i].x);
-        mpz_init(shares[i].y);
+    if (NULL == prime) {
+      return EXIT_FAILURE;
     }
 
-    for (j = 0; j < L; j++) {
-        retval = RAND_bytes((unsigned char *)secret_buf, S);
-        if (1 != retval) abort();
+    if (check_prime) {
+      BN_CTX * ctx = BN_CTX_new();
+      retval = BN_is_prime_ex(prime, BN_prime_checks, ctx, NULL);
+      if (1 != retval) { abort(); }
+      BN_CTX_free(ctx);
+    }
 
-        mpz_import (secret, sizeof(secret_buf)/sizeof(secret_buf[0]), 1,
-                    sizeof(secret_buf[0]), 0, 0, secret_buf);
-        riddle_assert(mpz_sizeinbase(secret, 2) < mpz_sizeinbase(prime, 2));
+    secret = BN_new();
+    str = BN_bn2hex(prime);
+    printf("Prime = %s\n", str);
+    OPENSSL_free(str);
+    printf("Prime size = %d\n", BN_num_bits(prime));
 
-        retval = riddle_split(prime, N, L, secret, shares);
-        riddle_assert(retval == 0);
-        riddle_print_shares(shares, N);
+    for (i = 0; i < N; i++) {
+        shares[i].x = BN_new();
+        shares[i].y = BN_new();
+    }
 
-        for (i = 2; i < N; i++) {
-            mpz_init(reconstructed);
-            retval = riddle_join(prime, i,
-                                (const struct riddle_share *) shares,
-                                 reconstructed);
-            if (i >= L) {
-                riddle_assert(retval == 0 && \
-                              mpz_cmp(reconstructed, secret) == 0);
-            } else {
-                riddle_assert(retval == 0 && \
-                              mpz_cmp(reconstructed, secret) != 0);
-            }
-            mpz_clear(reconstructed);
+    retval = BN_rand(secret, S * 8, -1, 0);
+    if (1 != retval) abort();
+    str = BN_bn2hex(secret);
+    printf("Secret = %s\n", str);
+    OPENSSL_free(str);
+    riddle_assert(BN_num_bits(secret) < BN_num_bits(prime));
+
+    retval = riddle_split(prime, N, L, secret, shares);
+    riddle_assert(retval == 0);
+    riddle_print_shares(shares, N);
+
+    for (i = 2; i < N; i++) {
+        reconstructed = BN_new();
+        retval = riddle_join(prime, i,
+                            (const struct riddle_share *) shares,
+                             reconstructed);
+        if (i >= L) {
+            riddle_assert(retval == 0);
+            riddle_assert(BN_cmp(reconstructed, secret) == 0);
+        } else {
+            riddle_assert(retval == 0);
+            riddle_assert(BN_cmp(reconstructed, secret) != 0);
         }
+        BN_clear_free(reconstructed);
     }
 
     for (i = 0; i < N; i++) {
-        mpz_clear(shares[i].x);
-        mpz_clear(shares[i].y);
+        BN_clear_free(shares[i].x);
+        BN_clear_free(shares[i].y);
     }
-    mpz_clear(secret);
+    str = NULL;
+    BN_clear_free(secret);
     return EXIT_SUCCESS;
 }

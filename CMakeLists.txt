@@ -15,7 +15,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-find_package(GMP REQUIRED)
 find_package(OpenSSL 1.1 REQUIRED)
 
 add_library(riddle SHARED
@@ -23,7 +22,6 @@ add_library(riddle SHARED
 )
 target_include_directories(riddle PUBLIC
   src
-  ${GMP_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}
 )
 if(UNIX)
@@ -56,7 +54,6 @@ foreach(test ${tests})
   target_link_libraries(riddle_${test} PUBLIC
     riddle
     ${OPENSSL_LIBRARIES}
-    ${GMP_LIBRARIES}
   )
   add_test(NAME test_riddle_${test} COMMAND riddle_${test})
 endforeach()

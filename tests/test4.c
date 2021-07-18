@@ -7,23 +7,29 @@
 int main()
 {
     int exitcode = EXIT_FAILURE;
-    mpz_t prime, thirtyfour;
+    BIGNUM * prime, * tmp1, * tmp2;
 
-    mpz_init(prime);
-    mpz_init(thirtyfour);
+    BN_CTX * ctx = BN_CTX_new();
+    prime = BN_new();
+    tmp1 = BN_new();
+    tmp2 = BN_new();
 
     /*
      * http://primes.utm.edu/curios/page.php?number_id=4556
      * Prime = (1597 * 34 ^ 2606) + 1
      */
-    mpz_set_ui(thirtyfour, 34);
-    mpz_pow_ui(prime, thirtyfour, 2606);
-    mpz_mul_ui(prime, prime, 1597);
-    mpz_add_ui(prime, prime, 1);
-    mpz_clear(thirtyfour);
+    BN_set_word(tmp1, 34);
+    BN_set_word(tmp2, 2606);
+    BN_exp(prime, tmp1, tmp2, ctx);
+    BN_set_word(tmp1, 1597);
+    BN_mul(prime, prime, tmp1, ctx);
+    BN_add(prime, prime, BN_value_one());
 
-    exitcode = do_test(prime, N, L, S);
-    mpz_clear(prime);
+    exitcode = do_test(prime, N, L, S, 0);
+    BN_free(prime);
+    BN_free(tmp1);
+    BN_free(tmp2);
+    BN_CTX_free(ctx);
 
     return exitcode;
 }

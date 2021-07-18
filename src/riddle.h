@@ -3,15 +3,14 @@
 
 #include <stdint.h>
 
-#include <gmp.h>
-
+#include <openssl/bn.h>
 
 /**
  * Represent a share with its X-Y coordinates
  */
 struct riddle_share {
-    mpz_t x;
-    mpz_t y;
+  BIGNUM * x;
+  BIGNUM * y;
 };
 
 
@@ -34,10 +33,10 @@ struct riddle_share {
  * @return 0 if successful, -1 otherwise.
  */
 int32_t riddle_split(
-    const mpz_t prime,
+    const BIGNUM * prime,
     const uint32_t num_shares,
     const uint32_t threshold,
-    const mpz_t secret,
+    const BIGNUM * secret,
     struct riddle_share * shares);
 
 /**
@@ -53,10 +52,10 @@ int32_t riddle_split(
  * @return 0 if successful, -1 otherwise
  */
 int32_t riddle_join(
-    const mpz_t prime,
+    const BIGNUM * prime,
     const uint32_t num_shares,
     const struct riddle_share * shares,
-    mpz_t secret);
+    BIGNUM * secret);
 
 
 #endif

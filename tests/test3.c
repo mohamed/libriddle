@@ -7,28 +7,37 @@
 int main()
 {
     int exitcode = EXIT_FAILURE;
-    mpz_t prime, ten, nine;
+    BIGNUM * prime, * tmp, * ten, * nine;
+    prime = tmp = ten = nine = NULL;
 
-    mpz_init(prime);
-    mpz_init(ten);
-    mpz_init(nine);
+    prime = BN_new();
+    tmp = BN_new();
+    ten = BN_new();
+    nine = BN_new();
 
     /* 1000 digit prime (3322 bits)
      * Source: http://primes.utm.edu/curios/page.php?number_id=4032
      * Prime = (85 * (10 ^ 999) + 41) / 9 + 4040054550
      */
-    mpz_set_ui(ten, 10);
-    mpz_set_ui(nine, 9);
-    mpz_pow_ui(prime, ten, 999);
-    mpz_mul_ui(prime, prime, 85);
-    mpz_add_ui(prime, prime, 41);
-    mpz_cdiv_q(prime, prime, nine);
-    mpz_add_ui(prime, prime, 4040054550UL);
-    mpz_clear(ten);
-    mpz_clear(nine);
+    BN_CTX * ctx = BN_CTX_new();
+    BN_set_word(ten, 10);
+    BN_set_word(nine, 999);
+    BN_exp(prime, ten, nine, ctx);
+    BN_set_word(nine, 85);
+    BN_mul(prime, prime, nine, ctx);
+    BN_set_word(nine, 41);
+    BN_add(prime, prime, nine);
+    BN_set_word(nine, 9);
+    BN_div(tmp, NULL, prime, nine, ctx);
+    BN_set_word(nine, 4040054550UL);
+    BN_add(prime, tmp, nine);
 
-    exitcode = do_test(prime, N, L, S);
-    mpz_clear(prime);
+    exitcode = do_test(prime, N, L, S, 0);
+    BN_CTX_free(ctx);
+    BN_free(prime);
+    BN_free(ten);
+    BN_free(nine);
+    BN_free(tmp);
 
     return exitcode;
 }

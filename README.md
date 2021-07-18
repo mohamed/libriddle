@@ -10,7 +10,7 @@ The goal is to provide a generic and efficient implementation.
 
 Requirements
 ------------
-You will need a C90 compiler, [CMake](https://cmake.org) 3.6+, [libgmp](https://libgmp.org), and [OpenSSL](https://openssl.org) 1.1+.
+You will need a C90 compiler, [CMake](https://cmake.org) 3.6+, and [OpenSSL](https://openssl.org) 1.1+.
 
 Building
 --------

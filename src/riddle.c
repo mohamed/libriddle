@@ -12,30 +12,26 @@
 static int32_t gen_unique_random_list(
     const uint32_t list_length,
     const size_t size,
-    mpz_t * list)
+    BIGNUM ** list)
 {
     uint32_t i = 0, j = 0;
     int32_t is_unique = 0, rv = 0, exitcode = -1;
-    uint8_t * buf = NULL;
 
-    if (!list || list_length < 2 || size < 1) {
+    if (NULL == list || list_length < 2 || size < 1) {
         return -1;
     }
 
-    buf = (uint8_t *) calloc(size, sizeof(uint8_t));
-    if (!buf) return -1;
-
     for (i = 0; i < list_length; i++) {
-        mpz_init(list[i]);
         is_unique = 0;
         while (!is_unique) {
 spin:
-            rv = RAND_bytes(buf, (int) size);
+            list[i] = BN_new();
+            rv = BN_rand(list[i], size, -1, 1);
             if (1 != rv) goto gen_cleanup;
-            mpz_import(list[i], size, 1, sizeof(uint8_t), 0, 0, buf);
-            mpz_add_ui(list[i], list[i], 1);
+            rv = BN_add(list[i], BN_value_one(), list[i]);
+            if (1 != rv) goto gen_cleanup;
             for (j = 0; j < i; j++) {
-                if (0 == mpz_cmp(list[i], list[j])) {
+                if (0 == BN_cmp(list[i], list[j])) {
                     goto spin;
                 }
             }
@@ -44,91 +40,100 @@ spin:
     }
     exitcode = 0;
 gen_cleanup:
-    free(buf);
-    buf = NULL;
     return exitcode;
 }
 
 int32_t riddle_split(
-    const mpz_t prime,
+    const BIGNUM * prime,
     const uint32_t num_shares,
     const uint32_t threshold,
-    const mpz_t secret,
+    const BIGNUM * secret,
     struct riddle_share * shares)
 {
     uint32_t i = 0, j = 0;
-    size_t share_size_in_bytes = 0;
+    size_t share_size = 0;
     int32_t exitcode = 0, rv = 0;
-    mpz_t * coefficients = NULL, * xs = NULL;
-    mpz_t y, tmp, degree;
+    BIGNUM ** coefficients = NULL, ** xs = NULL;
+    BIGNUM * y, * tmp, * degree;
 
     /* Check the inputs */
-    if (mpz_cmp(secret, prime) >= 0 ||
-        !shares ||
+    if (NULL == prime ||
+        NULL == secret ||
+        BN_cmp(secret, prime) >= 0 ||
+        NULL == shares ||
         threshold < 2 ||
         threshold > num_shares ||
         num_shares < 2) {
         return -1;
     }
 
-    coefficients = (mpz_t *) calloc(threshold - 1,  sizeof(mpz_t));
-    if (!coefficients) {
+    coefficients = (BIGNUM **) calloc(threshold - 1,  sizeof(BIGNUM *));
+    if (NULL == coefficients) {
         return -1;
     }
-    xs = (mpz_t *) calloc(num_shares, sizeof(mpz_t));
-    if (!xs) {
+    xs = (BIGNUM **) calloc(num_shares, sizeof(BIGNUM *));
+    if (NULL == xs) {
         free(coefficients);
         coefficients = NULL;
         return -1;
     }
 
     /* Initialize coefficients and xs */
-    share_size_in_bytes = (mpz_sizeinbase(prime, 2) - 1) / 8;
-    rv = gen_unique_random_list(threshold-1,
-          share_size_in_bytes, coefficients);
-    rv += gen_unique_random_list(num_shares, share_size_in_bytes, xs);
+    share_size = BN_num_bits(prime) - 1;
+    rv = gen_unique_random_list(threshold-1, share_size, coefficients);
+    rv += gen_unique_random_list(num_shares, share_size, xs);
     if (0 != rv) {
         exitcode = -1;
         goto split_cleanup;
     }
 
-    mpz_init(tmp);
+    BN_CTX * ctx = BN_CTX_new();
+    if (NULL == ctx) { abort(); }
+    tmp = BN_new();
+    if (NULL == tmp) { abort(); }
     for (i = 0; i < num_shares; i++) {
-        mpz_set(shares[i].x, xs[i]);
-        mpz_init_set(y, secret);
-        mpz_init_set_ui(degree, 1);
+        BN_copy(shares[i].x, xs[i]);
+        y = BN_dup(secret);
+        if (NULL == y) { abort(); }
+        degree = BN_dup(BN_value_one());
+        if (NULL == degree) { abort(); }
         for (j = 0; j < (threshold - 1); j++) {
-            mpz_powm_sec(tmp, shares[i].x, degree, prime);
-            mpz_addmul(y, coefficients[j], tmp);
-            mpz_add_ui(degree, degree, 1);
+            rv = BN_mod_exp(tmp, shares[i].x, degree, prime, ctx);
+            if (1 != rv) { exitcode = -1; goto handle_err; }
+            rv = BN_mod_mul(tmp, coefficients[j], tmp, prime, ctx);
+            if (1 != rv) { exitcode = -1; goto handle_err; }
+            rv = BN_mod_add(y, tmp, y, prime, ctx);
+            if (1 != rv) { exitcode = -1; goto handle_err; }
+            rv = BN_mod_add(degree, degree, BN_value_one(), prime, ctx);
+            if (1 != rv) { exitcode = -1; goto handle_err; }
         }
-        mpz_clear(degree);
-        mpz_mod(y, y, prime);
-        mpz_set(shares[i].y, y);
-        mpz_clear(y);
-        if (0 == mpz_cmp(shares[i].x, secret) ||
-              0 == mpz_cmp(shares[i].y, secret)) {
-            exitcode = -1;
+        BN_clear_free(degree);
+        BN_copy(shares[i].y, y);
+        BN_clear_free(y);
+        /* TODO: Can this if happen? */
+        if (0 == BN_cmp(shares[i].x, secret) ||
+              0 == BN_cmp(shares[i].y, secret)) {
+            exitcode = -3;
             break;
         }
     }
-    mpz_clear(tmp);
+handle_err:
+    BN_clear_free(tmp);
+    BN_CTX_free(ctx);
 
 split_cleanup:
     if (0 != exitcode) {
         for (i = 0; i < num_shares; i++) {
-            mpz_set_ui(shares[i].x, 0);
-            mpz_set_ui(shares[i].y, 0);
+            BN_zero(shares[i].x);
+            BN_zero(shares[i].y);
         }
     }
     /* Clear data */
     for (i = 0; i < num_shares; i++) {
-        mpz_set_ui(xs[i], 0);
-        mpz_clear(xs[i]);
+        BN_clear_free(xs[i]);
     }
     for (i = 0; i < (threshold - 1); i++) {
-        mpz_set_ui(coefficients[i], 0);
-        mpz_clear(coefficients[i]);
+        BN_clear_free(coefficients[i]);
     }
     free(coefficients);
     coefficients = NULL;
@@ -139,57 +144,67 @@ split_cleanup:
 
 
 int32_t riddle_join(
-    const mpz_t prime,
+    const BIGNUM * prime,
     const uint32_t num_shares,
     const struct riddle_share * shares,
-    mpz_t secret)
+    BIGNUM * secret)
 {
     uint32_t j = 0, m = 0;
-    int32_t retval = -1;
-    mpz_t product, d, r;
-    mpz_t reconstructed;
+    BIGNUM * product, * d, * r;
+    BIGNUM * reconstructed;
 
-    if (!shares || num_shares < 2) {
+    if (NULL == prime ||
+        NULL == shares ||
+        num_shares < 2 ||
+        NULL == secret) {
       return -1;
     }
 
     for (j = 0; j < num_shares; j++) {
-        if (mpz_cmp(shares[j].x, prime) >= 0 ||
-              mpz_cmp(shares[j].y, prime) >= 0) {
+        if (BN_cmp(shares[j].x, prime) >= 0 ||
+              BN_cmp(shares[j].y, prime) >= 0) {
             return -1;
         }
     }
 
-    mpz_init_set_ui(reconstructed, 0);
+    BN_CTX * ctx = BN_CTX_new();
+    if (NULL == ctx) { abort(); }
+    reconstructed = BN_new();
+    if (NULL == reconstructed) { abort(); }
+    BN_zero(reconstructed);
+    BIGNUM * p = NULL;
 
     for (j = 0; j < num_shares; j++) {
-        mpz_init_set_ui(product, 1);
+        product = BN_new();
+        if (NULL == product) { abort(); }
+        BN_one(product);
         for (m = 0; m < num_shares; m++) {
-            mpz_init(d);
-            mpz_init(r);
+            d = BN_new();
+            r = BN_new();
             if (m != j) {
-                mpz_sub(d, shares[m].x, shares[j].x);
-                retval = mpz_invert(d, d, prime);
-                if (0 == retval) {
-                    mpz_clear(d);
-                    mpz_clear(r);
-                    mpz_clear(product);
-                    mpz_clear(reconstructed);
+                BN_sub(d, shares[m].x, shares[j].x);
+                p = BN_mod_inverse(d, d, prime, ctx);
+                if (NULL == p) {
+                    BN_clear_free(d);
+                    BN_clear_free(r);
+                    BN_clear_free(product);
+                    BN_clear_free(reconstructed);
+                    BN_CTX_free(ctx);
                     return -1;
                 }
-                mpz_mul(r, shares[m].x, d);
-                mpz_mul(product, product, r);
+                BN_mod_mul(r, shares[m].x, d, prime, ctx);
+                BN_mod_mul(product, product, r, prime, ctx);
             }
-            mpz_clear(d);
-            mpz_clear(r);
+            BN_clear_free(d);
+            BN_clear_free(r);
         }
-        mpz_addmul(reconstructed, shares[j].y, product);
-        mpz_mod(reconstructed, reconstructed, prime);
-        mpz_clear(product);
+        BN_mod_mul(product, shares[j].y, product, prime, ctx);
+        BN_mod_add(reconstructed, reconstructed, product, prime, ctx);
+        BN_clear_free(product);
     }
-    mpz_set(secret, reconstructed);
-    mpz_set_ui(reconstructed, 0);
-    mpz_clear(reconstructed);
+    BN_copy(secret, reconstructed);
+    BN_clear_free(reconstructed);
+    BN_CTX_free(ctx);
 
     return 0;
 }
