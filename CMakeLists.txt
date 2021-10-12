@@ -17,9 +17,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
+set(OPENSSL_USE_STATIC_LIBS TRUE)
 find_package(OpenSSL 1.1 REQUIRED)
 
-add_library(riddle SHARED
+add_library(riddle STATIC
   src/riddle.c
 )
 target_include_directories(riddle PUBLIC
@@ -68,7 +69,8 @@ foreach(test ${tests})
   endif()
   target_link_libraries(riddle_${test} PUBLIC
     riddle
-    ${OPENSSL_LIBRARIES}
+    ${OPENSSL_CRYPTO_LIBRARY}
+    ${CMAKE_DL_LIBS}
   )
   add_test(NAME test_riddle_${test} COMMAND riddle_${test})
 endforeach()

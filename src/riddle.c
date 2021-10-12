@@ -32,6 +32,7 @@ spin:
             if (1 != rv) goto gen_cleanup;
             for (j = 0; j < i; j++) {
                 if (0 == BN_cmp(list[i], list[j])) {
+                    BN_clear_free(list[i]);
                     goto spin;
                 }
             }

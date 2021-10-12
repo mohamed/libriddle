@@ -48,7 +48,7 @@ CMAKE_CONFIG_ARGS   := -Wdev \
 .PHONY: distclean
 
 all install test clean: ${BUILD_DIR}/CMakeCache.txt
-	${CMAKE} --build ${BUILD_DIR} --target $@
+	${CMAKE} --build ${BUILD_DIR} --target $@ -j 4
 
 ${BUILD_DIR}/CMakeCache.txt:
 	${MAKE} configure
