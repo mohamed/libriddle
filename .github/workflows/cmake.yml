@@ -33,4 +33,9 @@ jobs:
       working-directory: ${{github.workspace}}/build_dir
       run: ctest -T memcheck
 
-
+    - name: Coverage
+      run: |
+        cmake -B ${{github.workspace}}/build_coverage -DCMAKE_BUILD_TYPE=Coverage
+        cmake --build ${{github.workspace}}/build_coverage --config Coverage
+        cd ${{github.workspace}}/build_coverage && ctest -C Test
+        cd ${{github.workspace}}/build_coverage && ctest -C Coverage
