@@ -38,4 +38,4 @@ jobs:
         cmake -B ${{github.workspace}}/build_coverage -DCMAKE_BUILD_TYPE=Coverage
         cmake --build ${{github.workspace}}/build_coverage --config Coverage
         cd ${{github.workspace}}/build_coverage && ctest -C Test
-        cd ${{github.workspace}}/build_coverage && ctest -C Coverage
+        cd ${{github.workspace}}/build_coverage && ctest -C coverage
