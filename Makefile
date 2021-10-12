@@ -1,9 +1,26 @@
 #####################################################################
+# CMake configuration
+#####################################################################
+
+ifdef ComSpec
+GENERATOR      := "Microsoft Visual Studio 2019"
+FixPath         = $(subst /,\,$1)
+RM              = if exist $1 rmdir /S /Q $1
+MKDIR           = if not exist $1 mkdir $1
+else
+GENERATOR      := "Unix Makefiles"
+FixPath         = $1
+RM              = rm -f -r $1
+MKDIR           = mkdir -p $1
+endif
+
+#####################################################################
 # Build type and directories
 #####################################################################
 BUILD_TYPE     ?= RelWithDebInfo
-BUILD_DIR      ?= ${CURDIR}/build_dir/${BUILD_TYPE}
-INSTALL_DIR    ?= ${CURDIR}/install_dir/${BUILD_TYPE}
+BUILD_DIR       = $(call FixPath,${CURDIR}/build_dir/${BUILD_TYPE})
+INSTALL_DIR     = $(call FixPath,${CURDIR}/install_dir/${BUILD_TYPE})
+CACHE           = $(call FixPath,${BUILD_DIR}/CMakeCache.txt)
 
 #####################################################################
 # Build tools: cmake, ctest, and lcov
@@ -13,25 +30,6 @@ CTEST          := ctest
 LCOV           := lcov
 GENHTML        := genhtml
 
-#####################################################################
-# CMake configuration
-#####################################################################
-
-ifdef ComSpec
-GENERATOR      := "NMake Makefiles"
-RM             := rmdir /S /Q
-FixPath        = $(subst /,\,$1)
-MKDIR          := mkdir
-CC             := cl
-CXX            := cl
-else
-GENERATOR      := "Ninja"
-RM             := rm -f -r
-FixPath        = $1
-MKDIR          := mkdir -p
-CC             ?= gcc
-CXX            ?= g++
-endif
 
 CMAKE_CONFIG_ARGS   := -Wdev \
 	-G ${GENERATOR} \
@@ -47,10 +45,10 @@ CMAKE_CONFIG_ARGS   := -Wdev \
 #####################################################################
 .PHONY: distclean
 
-all install test clean: ${BUILD_DIR}/CMakeCache.txt
+all install test clean: ${CACHE}
 	${CMAKE} --build ${BUILD_DIR} --target $@ -j 4
 
-${BUILD_DIR}/CMakeCache.txt:
+${CACHE}:
 	${MAKE} configure
 
 coverage: test
@@ -64,11 +62,11 @@ memcheck: all
 	cd ${BUILD_DIR} && ${CTEST} -T memcheck
 
 ${BUILD_DIR} ${INSTALL_DIR}:
-	${MKDIR} $(call FixPath,$@)
+	$(call MKDIR,$@)
 
 configure: | ${BUILD_DIR} ${INSTALL_DIR}
 	cd ${BUILD_DIR} && ${CMAKE} ${CMAKE_CONFIG_ARGS}
 
 distclean:
-	${RM} $(call FixPath,${CURDIR}/build_dir)
-	${RM} $(call FixPath,${CURDIR}/install_dir)
+	$(call RM,$(call FixPath,${CURDIR}/build_dir))
+	$(call RM,$(call FixPath,${CURDIR}/install_dir))

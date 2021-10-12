@@ -19,6 +19,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 find_package(OpenSSL 1.1 REQUIRED)
+find_package(Threads REQUIRED)
 
 add_library(riddle STATIC
   src/riddle.c
@@ -71,6 +72,7 @@ foreach(test ${tests})
     riddle
     ${OPENSSL_CRYPTO_LIBRARY}
     ${CMAKE_DL_LIBS}
+    Threads::Threads
   )
   add_test(NAME test_riddle_${test} COMMAND riddle_${test})
 endforeach()
