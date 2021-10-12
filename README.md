@@ -2,6 +2,7 @@ libriddle
 =========
 
 [![build](https://github.com/mohamed/libriddle/actions/workflows/cmake.yml/badge.svg)](https://github.com/mohamed/libriddle/actions/workflows/cmake.yml)
+[![codecov](https://codecov.io/gh/mohamed/libriddle/branch/master/graph/badge.svg?token=8F802WENF5)](https://codecov.io/gh/mohamed/libriddle)
 
 This is a minimalist and complete implementation of Shamir's secret sharing
 algorithm as described in [JACM1979](https://doi.org/10.1145/359168.359176).
