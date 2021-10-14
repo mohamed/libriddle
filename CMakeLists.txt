@@ -36,9 +36,18 @@ if(UNIX)
       _FORTIFY_SOURCE=2
     )
   endif()
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(warning
+      -Wall
+      -Wextra
+    )
+  elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    set(warning
+      -Weverything
+    )
+  endif()
   target_compile_options(riddle PUBLIC
-    -Wall
-    -Wextra
+    ${warning}
     -Werror
     -fstack-protector-all
   )

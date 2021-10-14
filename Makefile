@@ -31,13 +31,11 @@ LCOV           := lcov
 GENHTML        := genhtml
 
 
-CMAKE_CONFIG_ARGS   := -Wdev \
+CMAKE_ARGS      = \
+	-Wdev \
 	-G ${GENERATOR} \
-	-DCMAKE_C_COMPILER=${CC} \
-	-DCMAKE_CXX_COMPILER=${CXX} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
-	-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT} \
 	${CURDIR}
 
 #####################################################################
@@ -65,7 +63,7 @@ ${BUILD_DIR} ${INSTALL_DIR}:
 	$(call MKDIR,$@)
 
 configure: | ${BUILD_DIR} ${INSTALL_DIR}
-	cd ${BUILD_DIR} && ${CMAKE} ${CMAKE_CONFIG_ARGS}
+	cd ${BUILD_DIR} && ${CMAKE} ${CMAKE_ARGS}
 
 distclean:
 	$(call RM,$(call FixPath,${CURDIR}/build_dir))

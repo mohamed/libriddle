@@ -8,6 +8,7 @@ int main()
 {
     int exitcode = EXIT_FAILURE;
     BIGNUM * prime, * tmp, * ten, * nine;
+    BN_CTX * ctx = NULL;
     prime = tmp = ten = nine = NULL;
 
     prime = BN_new();
@@ -19,7 +20,7 @@ int main()
      * Source: http://primes.utm.edu/curios/page.php?number_id=4032
      * Prime = (85 * (10 ^ 999) + 41) / 9 + 4040054550
      */
-    BN_CTX * ctx = BN_CTX_new();
+    ctx = BN_CTX_new();
     BN_set_word(ten, 10);
     BN_set_word(nine, 999);
     BN_exp(prime, ten, nine, ctx);

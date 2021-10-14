@@ -50,15 +50,20 @@ int do_test(const BIGNUM * prime,
     int32_t retval = 0;
     uint32_t i = 0;
     BIGNUM * secret, * reconstructed;
-    struct riddle_share shares[N];
-    char * str;
+    struct riddle_share * shares = NULL;
+    char * str = NULL;
+    BN_CTX * ctx = NULL;
 
-    if (NULL == prime) {
+    if (NULL == prime || 0 == N) {
+      return EXIT_FAILURE;
+    }
+    shares = (struct riddle_share *) calloc(N, sizeof(struct riddle_share));
+    if (NULL == shares) {
       return EXIT_FAILURE;
     }
 
     if (check_prime) {
-      BN_CTX * ctx = BN_CTX_new();
+      ctx = BN_CTX_new();
       retval = BN_is_prime_ex(prime, BN_prime_checks, ctx, NULL);
       if (1 != retval) { abort(); }
       BN_CTX_free(ctx);
@@ -75,7 +80,7 @@ int do_test(const BIGNUM * prime,
         shares[i].y = BN_new();
     }
 
-    retval = BN_rand(secret, S * 8, -1, 0);
+    retval = BN_rand(secret, (int) (S * 8), -1, 0);
     if (1 != retval) abort();
     str = BN_bn2hex(secret);
     printf("Secret = %s\n", str);
@@ -107,5 +112,8 @@ int do_test(const BIGNUM * prime,
     }
     str = NULL;
     BN_clear_free(secret);
+    free(shares);
+    shares = NULL;
+
     return EXIT_SUCCESS;
 }

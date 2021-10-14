@@ -26,7 +26,7 @@ static int32_t gen_unique_random_list(
         while (!is_unique) {
 spin:
             list[i] = BN_new();
-            rv = BN_rand(list[i], size, -1, 1);
+            rv = BN_rand(list[i], (int) size, -1, 1);
             if (1 != rv) goto gen_cleanup;
             rv = BN_add(list[i], BN_value_one(), list[i]);
             if (1 != rv) goto gen_cleanup;
@@ -56,6 +56,7 @@ int32_t riddle_split(
     int32_t exitcode = 0, rv = 0;
     BIGNUM ** coefficients = NULL, ** xs = NULL;
     BIGNUM * y, * tmp, * degree;
+    BN_CTX * ctx = NULL;
 
     /* Check the inputs */
     if (NULL == prime ||
@@ -80,7 +81,7 @@ int32_t riddle_split(
     }
 
     /* Initialize coefficients and xs */
-    share_size = BN_num_bits(prime) - 1;
+    share_size = (size_t) BN_num_bits(prime) - 1;
     rv = gen_unique_random_list(threshold-1, share_size, coefficients);
     rv += gen_unique_random_list(num_shares, share_size, xs);
     if (0 != rv) {
@@ -88,7 +89,7 @@ int32_t riddle_split(
         goto split_cleanup;
     }
 
-    BN_CTX * ctx = BN_CTX_new();
+    ctx = BN_CTX_new();
     if (NULL == ctx) { abort(); }
     tmp = BN_new();
     if (NULL == tmp) { abort(); }
@@ -153,6 +154,8 @@ int32_t riddle_join(
     uint32_t j = 0, m = 0;
     BIGNUM * product, * d, * r;
     BIGNUM * reconstructed;
+    BN_CTX * ctx = NULL;
+    BIGNUM * p = NULL;
 
     if (NULL == prime ||
         NULL == shares ||
@@ -168,12 +171,11 @@ int32_t riddle_join(
         }
     }
 
-    BN_CTX * ctx = BN_CTX_new();
+    ctx = BN_CTX_new();
     if (NULL == ctx) { abort(); }
     reconstructed = BN_new();
     if (NULL == reconstructed) { abort(); }
     BN_zero(reconstructed);
-    BIGNUM * p = NULL;
 
     for (j = 0; j < num_shares; j++) {
         product = BN_new();

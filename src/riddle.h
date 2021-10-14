@@ -1,5 +1,5 @@
-#ifndef _RIDDLE_H_
-#define _RIDDLE_H_
+#ifndef RIDDLE_H_
+#define RIDDLE_H_
 
 #include <stdint.h>
 
