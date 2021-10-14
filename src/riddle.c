@@ -18,29 +18,41 @@ static int32_t gen_unique_random_list(
     int32_t is_unique = 0, rv = 0, exitcode = -1;
 
     if (NULL == list || list_length < 2 || size < 1) {
-        return -1;
-    }
-
-    for (i = 0; i < list_length; i++) {
-        is_unique = 0;
-        while (!is_unique) {
-spin:
-            list[i] = BN_new();
-            rv = BN_rand(list[i], (int) size, -1, 1);
-            if (1 != rv) goto gen_cleanup;
-            rv = BN_add(list[i], BN_value_one(), list[i]);
-            if (1 != rv) goto gen_cleanup;
-            for (j = 0; j < i; j++) {
-                if (0 == BN_cmp(list[i], list[j])) {
+        exitcode = -1;
+    } else {
+        exitcode = 0;
+        for (i = 0; i < list_length; i++) {
+            is_unique = 0;
+            while (!is_unique) {
+                list[i] = BN_new();
+                rv = BN_rand(list[i], (int) size, -1, 1);
+                if (1 != rv) {
+                    exitcode = -1;
                     BN_clear_free(list[i]);
-                    goto spin;
+                    break;
+                }
+                rv = BN_add(list[i], BN_value_one(), list[i]);
+                if (1 != rv) {
+                    exitcode = -1;
+                    BN_clear_free(list[i]);
+                    break;
+                }
+                is_unique = 1;
+                for (j = 0; j < i; j++) {
+                    if (0 == BN_cmp(list[i], list[j])) {
+                        is_unique = 0;
+                        break;
+                    }
+                }
+                if (!is_unique) {
+                    BN_clear_free(list[i]);
                 }
             }
-            is_unique = 1;
+            if (0 != exitcode) {
+                break;
+            }
         }
     }
-    exitcode = 0;
-gen_cleanup:
     return exitcode;
 }
 
@@ -59,13 +71,13 @@ int32_t riddle_split(
     BN_CTX * ctx = NULL;
 
     /* Check the inputs */
-    if (NULL == prime ||
-        NULL == secret ||
-        BN_cmp(secret, prime) >= 0 ||
-        NULL == shares ||
-        threshold < 2 ||
-        threshold > num_shares ||
-        num_shares < 2) {
+    if ((NULL == prime) ||
+        (NULL == secret) ||
+        (BN_cmp(secret, prime) >= 0) ||
+        (NULL == shares) ||
+        (threshold < 2) ||
+        (threshold > num_shares) ||
+        (num_shares < 2)) {
         return -1;
     }
 
