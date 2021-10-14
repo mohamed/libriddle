@@ -43,3 +43,7 @@ jobs:
         ctest -T coverage
         lcov --directory . --capture --output-file coverage.info --base-directory .
         bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
+
+    - name: Codacy Analysis CLI
+      uses: codacy/codacy-analysis-cli-action@4.0.0
+
