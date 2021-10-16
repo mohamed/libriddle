@@ -1,3 +1,4 @@
 build_dir
 install_dir
 .ccls-cache
+compile_commands.json
