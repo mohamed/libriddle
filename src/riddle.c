@@ -127,8 +127,10 @@ int32_t riddle_split(
             if (1 != rv) { goto cleanup_s; }
         }
         BN_clear_free(degree);
+        degree = NULL;
         BN_copy(shares[i].y, y);
         BN_clear_free(y);
+        y = NULL;
         /* TODO: Can this if happen? */
         if (0 == BN_cmp(shares[i].x, secret) ||
               0 == BN_cmp(shares[i].y, secret)) {
